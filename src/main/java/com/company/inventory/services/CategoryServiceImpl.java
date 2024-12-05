@@ -31,7 +31,7 @@ public class CategoryServiceImpl implements ICategoryService {
 			response.setMetadata("Respuesta ok", "00", "Respuesta exitosa");
 		} catch (Exception e) {			
 			response.setMetadata("Respuesta err", "-1", "Error al consultar");
-			e.getStackTrace();
+			e.printStackTrace();
 			return new ResponseEntity<CategoryResponseRest>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 		
@@ -55,7 +55,7 @@ public class CategoryServiceImpl implements ICategoryService {
 			}
 		} catch (Exception e) {			
 			response.setMetadata("Respuesta err", "-1", "Error al consultar por id");
-			e.getStackTrace();
+			e.printStackTrace();
 			return new ResponseEntity<CategoryResponseRest>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 		
@@ -65,63 +65,81 @@ public class CategoryServiceImpl implements ICategoryService {
 	@Override
 	@Transactional
 	public ResponseEntity<CategoryResponseRest> save(Category category) {
-		CategoryResponseRest response = new CategoryResponseRest();
-		List<Category> list = new ArrayList<>();
-		
-		try {
-				Category categorySaved = categoryDao.save(category);
-				if (categorySaved != null) {
-					list.add(categorySaved);
-					response.setMetadata("Respuesta ok", "00", "Categoria guardada");
-					response.getCategoryResponse().setCategory(list);
-				} else {
-					response.setMetadata("Respuesta err", "-1", "Categoria no guardada");
-					return new ResponseEntity<CategoryResponseRest>(response, HttpStatus.BAD_REQUEST);
-				}
-				
-		} catch (Exception e) {			
-			response.setMetadata("Respuesta err", "-1", "Error al grabar la categoria");
-			e.getStackTrace();
-			return new ResponseEntity<CategoryResponseRest>(response, HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-		
-		return new ResponseEntity<CategoryResponseRest>(response, HttpStatus.OK);
+	    CategoryResponseRest response = new CategoryResponseRest();
+	    List<Category> list = new ArrayList<>();
+	    
+	    try {
+	        Category categorySaved = categoryDao.save(category);
+	        list.add(categorySaved);
+
+	        response.setMetadata("Respuesta ok", "00", "Categoría guardada");
+	        response.getCategoryResponse().setCategory(list);
+	        return ResponseEntity.ok(response);
+	        
+	    } catch (IllegalArgumentException e) {
+	        response.setMetadata("Respuesta err", "-1", "Datos inválidos para la categoría");
+	        e.printStackTrace();
+	        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+	        
+	    } catch (Exception e) {
+	        response.setMetadata("Respuesta err", "-1", "Error al guardar la categoría");
+	        e.printStackTrace();
+	        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+	    }
 	}
+
 
 	@Override
 	@Transactional
 	public ResponseEntity<CategoryResponseRest> update(Category category, Long id) {
+	    CategoryResponseRest response = new CategoryResponseRest();
+	    List<Category> list = new ArrayList<>();
+	    
+	    try {
+	        Category categoryToUpdate = categoryDao.findById(id)
+	                                              .orElseThrow(() -> new Exception("Categoría no encontrada"));
+
+	        categoryToUpdate.setName(category.getName());
+	        categoryToUpdate.setDescription(category.getDescription());
+	        
+	        Category updatedCategory = categoryDao.save(categoryToUpdate);
+	        list.add(updatedCategory);
+	        
+	        response.setMetadata("Respuesta ok", "00", "Categoría actualizada");
+	        response.getCategoryResponse().setCategory(list);
+	        return ResponseEntity.ok(response);
+	        
+	    } catch (Exception e) {
+	        response.setMetadata("Respuesta err", "-1", e.getMessage().contains("Categoría no encontrada") ? 
+	                               "Categoría no encontrada" : "Error al actualizar la categoría");
+	        e.printStackTrace(); 
+	        
+	        HttpStatus status = e.getMessage().contains("Categoría no encontrada") ? 
+	                            HttpStatus.NOT_FOUND : HttpStatus.CONFLICT;
+	        return new ResponseEntity<>(response, status);
+	    }
+	}
+
+
+	@Override
+	@Transactional
+	public ResponseEntity<CategoryResponseRest> deleteById(Long id) {
 		CategoryResponseRest response = new CategoryResponseRest();
-		List<Category> list = new ArrayList<>();
 		
 		try {
-				
-				Optional<Category> categorySearch = categoryDao.findById(id);
-				if (categorySearch.isPresent()) {
-					categorySearch.get().setName(category.getName());
-					categorySearch.get().setDescription(category.getDescription());
-					
-					Category categoryToUpdate = categoryDao.save(categorySearch.get());
-					if(categoryToUpdate != null) {
-						list.add(categoryToUpdate);
-						response.setMetadata("Respuesta ok", "00", "Categoria actualizada");
-						response.getCategoryResponse().setCategory(list);
-					} else {
-						response.setMetadata("Respuesta err", "-1", "Categoria no actualizada");
-						return new ResponseEntity<CategoryResponseRest>(response, HttpStatus.BAD_REQUEST);
-					}
-				} else {
-					response.setMetadata("Respuesta err", "-1", "Categoria no encontrada");
-					return new ResponseEntity<CategoryResponseRest>(response, HttpStatus.NOT_FOUND);
-				}
-				
-		} catch (Exception e) {			
-			response.setMetadata("Respuesta err", "-1", "Error al actualizar la categoria");
-			e.getStackTrace();
-			return new ResponseEntity<CategoryResponseRest>(response, HttpStatus.INTERNAL_SERVER_ERROR);
-		}
+			if (categoryDao.existsById(id)) { 
+				categoryDao.deleteById(id); 
+				response.setMetadata("respuesta ok", "00", "Registro eliminado");
+				return new ResponseEntity<CategoryResponseRest>(response, HttpStatus.OK);
+			} else { 
+				response.setMetadata("Respuesta err", "-1", "Categoría no encontrada"); 
+				return new ResponseEntity<>(response, HttpStatus.NOT_FOUND); }
 		
-		return new ResponseEntity<CategoryResponseRest>(response, HttpStatus.OK);
+		} catch (Exception e) {			
+			response.setMetadata("Respuesta err", "-1", "Error al eliminar");
+			e.printStackTrace();
+			return new ResponseEntity<CategoryResponseRest>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		}		
 	}
 
 }
