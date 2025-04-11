@@ -14,6 +14,8 @@ import com.company.inventory.model.Category;
 import com.company.inventory.model.Product;
 import com.company.inventory.response.ProductResponseRest;
 
+import jakarta.transaction.Transactional;
+
 @Service
 public class ProductServiceImpl implements IProductService {
 	
@@ -27,6 +29,7 @@ public class ProductServiceImpl implements IProductService {
 	}
 
 	@Override
+	@Transactional
 	public ResponseEntity<ProductResponseRest> save(Product product, Long categoryId) {
 		ProductResponseRest response = new ProductResponseRest();
 		List<Product> list = new ArrayList<>();
@@ -58,6 +61,12 @@ public class ProductServiceImpl implements IProductService {
 		}
 		
 		return new ResponseEntity<ProductResponseRest>(response, HttpStatus.OK);
+	}
+
+	@Override
+	public ResponseEntity<ProductResponseRest> searchById(Long id) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }
